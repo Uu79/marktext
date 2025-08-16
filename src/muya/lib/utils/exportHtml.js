@@ -35,25 +35,54 @@ class ExportHtml {
 
   async renderMermaid () {
     const codes = this.exportContainer.querySelectorAll('code.language-mermaid')
+    if (codes.length === 0) return
+
+    const mermaid = await loadRenderer('mermaid')
+    // Initialize with proper v10 configuration
+    mermaid.initialize({
+      securityLevel: 'loose',
+      theme: this.muya ? this.muya.options.mermaidTheme : 'default',
+      startOnLoad: false,
+      flowchart: {
+        useMaxWidth: true,
+        htmlLabels: true
+      },
+      sequence: {
+        useMaxWidth: true
+      },
+      gantt: {
+        useMaxWidth: true
+      }
+    })
+
     for (const code of codes) {
       const preEle = code.parentNode
-      const mermaidContainer = document.createElement('div')
-      mermaidContainer.innerHTML = sanitize(unescapeHTML(code.innerHTML), EXPORT_DOMPURIFY_CONFIG, true)
-      mermaidContainer.classList.add('mermaid')
-      preEle.replaceWith(mermaidContainer)
-    }
-    const mermaid = await loadRenderer('mermaid')
-    // We only export light theme, so set mermaid theme to `default`, in the future, we can choose whick theme to export.
-    mermaid.initialize({
-      securityLevel: 'strict',
-      theme: 'default'
-    })
-    mermaid.init(undefined, this.exportContainer.querySelectorAll('div.mermaid'))
-    if (this.muya) {
-      mermaid.initialize({
-        securityLevel: 'strict',
-        theme: this.muya.options.mermaidTheme
-      })
+      const rawCode = unescapeHTML(code.innerHTML)
+      const id = `mermaid-export-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+
+      try {
+        // Use mermaid.render() for v10
+        if (mermaid.render) {
+          const { svg } = await mermaid.render(id, rawCode)
+          const mermaidContainer = document.createElement('div')
+          mermaidContainer.innerHTML = svg
+          mermaidContainer.classList.add('mermaid')
+          preEle.replaceWith(mermaidContainer)
+        } else {
+          // Fallback for older versions
+          const mermaidContainer = document.createElement('div')
+          mermaidContainer.innerHTML = sanitize(rawCode, EXPORT_DOMPURIFY_CONFIG, true)
+          mermaidContainer.classList.add('mermaid')
+          preEle.replaceWith(mermaidContainer)
+
+          if (mermaid.init) {
+            mermaid.init(undefined, mermaidContainer)
+          }
+        }
+      } catch (err) {
+        console.error('Mermaid export rendering error:', err)
+        // Keep the original code block if rendering fails
+      }
     }
   }
 

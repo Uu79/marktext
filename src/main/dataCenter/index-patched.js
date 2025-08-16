@@ -207,7 +207,7 @@ class DataCenter extends EventEmitter {
     })
 
     ipcMain.handle('mt::GET_USER_DATA_ASYNC', async () => {
-      return this.getAll()
+      return await this.getAll()
     })
 
     ipcMain.on('mt::GET_USER_DATA_ITEM', async (e, key) => {
