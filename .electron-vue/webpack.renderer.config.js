@@ -101,6 +101,23 @@ const rendererConfig = {
         exclude: /node_modules/
       },
       {
+        test: /\.mjs$/,
+        include: [
+          path.resolve(__dirname, '../node_modules/mermaid')
+        ],
+        use: [
+          {
+            loader: 'babel-loader',
+            options: {
+              cacheDirectory: true,
+              plugins: [
+                require('@babel/plugin-proposal-class-static-block')
+              ]
+            }
+          }
+        ]
+      },
+      {
         test: /\.node$/,
         loader: 'node-loader',
         options: {

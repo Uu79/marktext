@@ -1,6 +1,6 @@
 import loadRenderer from '../../renderers'
-import { CLASS_OR_ID, PREVIEW_DOMPURIFY_CONFIG } from '../../config'
-import { conflict, mixins, camelToSnake, sanitize } from '../../utils'
+import { CLASS_OR_ID } from '../../config'
+import { conflict, mixins, camelToSnake } from '../../utils'
 import { patch, toVNode, toHTML, h } from './snabbdom'
 import { beginRules } from '../rules'
 import renderInlines from './renderInlines'
@@ -99,9 +99,8 @@ class StateRender {
     if (this.mermaidCache.size) {
       const mermaid = await loadRenderer('mermaid')
 
-      // Initialize Mermaid with proper v10 configuration
       mermaid.initialize({
-        securityLevel: 'loose', // Change to 'loose' for better compatibility
+        securityLevel: 'loose',
         theme: this.muya.options.mermaidTheme || 'default',
         startOnLoad: false,
         flowchart: {
@@ -124,34 +123,13 @@ class StateRender {
         }
 
         try {
-          // Generate unique ID for each diagram
           const id = `mermaid-${key.replace('#', '')}-${Date.now()}`
-
-          // Method 1: Try using mermaid.render() which is the recommended v10 API
-          if (mermaid.render) {
-            try {
-              const { svg } = await mermaid.render(id, code)
-              target.innerHTML = svg
-              target.classList.remove(CLASS_OR_ID.AG_MATH_ERROR)
-            } catch (renderErr) {
-              // If render fails, try alternative method
-              console.warn('Mermaid render failed, trying alternative:', renderErr)
-              throw renderErr
-            }
-          } else {
-            // Method 2: Use the traditional approach with mermaid class
-            target.innerHTML = sanitize(code, PREVIEW_DOMPURIFY_CONFIG, true)
-            target.classList.add('mermaid')
-
-            if (mermaid.init) {
-              mermaid.init(undefined, target)
-            } else if (mermaid.run) {
-              await mermaid.run({
-                nodes: [target],
-                suppressErrors: false
-              })
-            }
+          const { svg, bindFunctions } = await mermaid.render(id, code)
+          target.innerHTML = svg
+          if (bindFunctions) {
+            bindFunctions(target)
           }
+          target.classList.remove(CLASS_OR_ID.AG_MATH_ERROR)
         } catch (err) {
           console.error('Mermaid rendering error:', err)
           target.innerHTML = '< Invalid Mermaid Codes >'
